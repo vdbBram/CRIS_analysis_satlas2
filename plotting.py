@@ -7,7 +7,7 @@ from moments import NuclearState as NS
 from IGISOL_moments import IGISOL_NuclearState as IG_NS
 from uncertainties import unumpy
 from uncertainties import ufloat as uf
-from typing import Callable, Union
+from typing import Callable, Union, Tuple
 from numpy.typing import ArrayLike
 
 class Plotting:
@@ -33,7 +33,7 @@ class Plotting:
 				   '110_1':{'Mu':uf(2.7271,0.0008)}, '110_6':{'Mu':uf(3.588,0.003)}, '111_0.5':{'Mu':uf(-0.146,0.002)}, '112_2':{'Mu':uf(-0.0547,0.0005)},
 				   '113_0.5':{'Mu':uf(-0.159,0.002)}}
 
-	def check_param_valid(self, getter_xy: Callable[[str,float,str,bool,int,str], tuple], param: str) -> bool:
+	def check_param_valid(self, getter_xy: Callable[[str,float,str,bool,int,str], Tuple[ufloat,ufloat]], param: str) -> bool:
 		'''Check wether parameter names are valid
 
         Parameters
@@ -58,7 +58,7 @@ class Plotting:
 		print('wtf did you put in getter_xy xddddd')
 		return False
 
-	def plot_HF_factors(self, ax: plt.Axes, dict_mass_spin: dict, param: str, getter_xy: Callable[[str,float,str,bool,int,str], tuple], scale_I: bool = False, n_proton: int = 0, **plot_kwargs) -> plt.Axes:
+	def plot_HF_factors(self, ax: plt.Axes, dict_mass_spin: dict, param: str, getter_xy: Callable[[str,float,str,bool,int,str], Tuple[ufloat,ufloat]], scale_I: bool = False, n_proton: int = 0, **plot_kwargs) -> plt.Axes:
 		'''reads the fit parameters for a single scan file and returns a dictionary with keys the parameter names and parameter names + _err
 
         Parameters
@@ -113,7 +113,7 @@ class Plotting:
 					ax = self.ax_parameters(ax, x_value = x, y_value = y, I = I, label = 'CRIS', **plot_kwargs)
 		return self.plot_layout(ax = ax, param = param, n_proton = n_proton, legend_handles = self._legend_handles, **plot_kwargs)
 
-	def get_HF_parameters_xy(self, mass: int, I: float, param: str, scale_I: bool, n_proton: int, string_nuclear_state_class: str) -> tuple:
+	def get_HF_parameters_xy(self, mass: int, I: float, param: str, scale_I: bool, n_proton: int, string_nuclear_state_class: str) -> Tuple[ufloat,ufloat]:
 		'''getter function for HF parameters, returning a tuple with the x eg mass or neutron number and y the values + errors of the selected parameter
 
         Parameters
@@ -133,7 +133,7 @@ class Plotting:
 
         Returns
         -------
-        tuple
+        tuple of ufloat of x and y value
         '''
 		if string_nuclear_state_class == 'IGISOL':
 			try:
@@ -156,7 +156,7 @@ class Plotting:
 		else:
 			raise RuntimeError('give CRIS or IGISOL for string_nuclear_state_class')
 
-	def get_HF_moments_xy(self, mass: int, I: float, param: str, scale_I: bool, n_proton: int, string_nuclear_state_class: str) -> tuple:
+	def get_HF_moments_xy(self, mass: int, I: float, param: str, scale_I: bool, n_proton: int, string_nuclear_state_class: str) -> Tuple[ufloat,ufloat]:
 		'''getter function for HF moments, returning a tuple with the x eg mass or neutron number and y the values + errors of the selected parameter
 
         Parameters
@@ -176,7 +176,7 @@ class Plotting:
 
         Returns
         -------
-        tuple
+        tuple of ufloat of x and y value
         '''
 		denominator = 1
 		factor = 1

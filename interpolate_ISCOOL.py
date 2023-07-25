@@ -4,6 +4,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 from scipy.signal import savgol_filter
+from typing import Tuple
+from numpy.typing import ArrayLike
 
 def filter_ISCOOL(path: str, mass_range: list, filename: str, ISCOOL_voltage_multiplier: float, plot: bool = False, 
 				  iscool_columns: list = ['timestamp', 'offset', 'iscool_voltage'], method: str = 'spline_iscool', **args) -> interp1d:
@@ -108,7 +110,7 @@ def interpolateISCOOL(path: str, mass_range: list, filename: str, ISCOOL_voltage
 		plt.show()
 	return ISCOOL_spline
 
-def get_array_iscool(path: str, mass_range: list, filename: str, iscool_columns: list = ['timestamp', 'offset', 'iscool_voltage']) -> tuple:
+def get_array_iscool(path: str, mass_range: list, filename: str, iscool_columns: list = ['timestamp', 'offset', 'iscool_voltage']) -> Tuple[ArrayLike,ArrayLike]:
 	'''Reads the timestamp and ISCOOL readout for a given mass range and returns in an array
 
         Parameters
