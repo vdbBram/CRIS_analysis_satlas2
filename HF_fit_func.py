@@ -1,5 +1,6 @@
 from interpolate_refscans_centroid import *
 from HFFit_baseclass import *
+from typing import Tuple
 
 def check_ref(initial_param: dict, MASS: int, I_ref: float, mass_ref: int) -> bool:
     '''checks if the scan is the reference isomer scan
@@ -184,7 +185,7 @@ def param_plot(nb_datasets: int, fig: plt.figure, ax: Union[plt.Axes,ArrayLike],
     return ax
 
 def fitter(test: bool, save: bool, llh: bool, interp_method: str, data: list, initial_param: dict, plot_param: dict, MASS: int, mass_ref: int, I_ref: float, SCANS: list, 
-    DATA_FOLDER: str, SAVEPATH_FIG: str, SAVEPATH_PARAM: str, **llh_kwargs) -> tuple:
+    DATA_FOLDER: str, SAVEPATH_FIG: str, SAVEPATH_PARAM: str, **llh_kwargs) -> Tuple[plt.figure,plt.Axes,satlas2.Fitter]:
     '''plots fitted parameter together with the data
 
         Parameters
