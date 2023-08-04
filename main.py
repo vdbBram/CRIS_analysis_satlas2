@@ -22,7 +22,7 @@ try:
 except:
     data = D.gate_tof(data = data, manual = manual)
 data = D.filter_scatter(data = data, filename = 'iscool2', method = 'spline_ISCOOL', ISCOOL_voltage_multiplier = 10000) # apply filter to ISCOOL, for savgol you need to include window_length and polyorder. other options are spline_ISCOOL, avg
-data = D.calibrate_CRIS_voltagemeter(datat = data, calibration_factor = 1.005030) 
+data = D.calibrate_CRIS_voltagemeter(data = data, calibration_factor = 1.005030) 
 data = D.apply_wavenumber_correction(data = data) # you can change the ref wavenumber channel by using eg. D._ref_channel = 'wavenumber_3', defaults to 'wavenumber_2' 
 data = D.gate_wavenumber(data = data, wavenumber = D._wn_channel) # gate the wn values in case laser lost lock or wavemeter trips, you might wait for 7min if you dont because of np.arange, etc.
 binned_data = D.bin_data(data = data, freq_multiplier = 2) # this is for voltage scans, use bin_wm_data() with same arguments for laser scanning

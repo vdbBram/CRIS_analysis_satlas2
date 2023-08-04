@@ -87,7 +87,7 @@ def create_spin_label(inputstring: str) -> str:
 # input_param should be dict of dict eg. for data with 2 isomers and background, first element in dict is first isomer and second element is second isomer with all the respective nuclear info and last element is the background
 class HF_fitter:
     # all possible arguments for the input_param and plot_args
-    _all_input_param = ['I', 'J', 'ABC', 'centroid', 'scale', 'background_values', 'background_bounds','racah','variation_HFparam', 'set_values', 'set_boundaries', 'set_priors', 
+    _all_input_param = ['I', 'J', 'ABC', 'centroid', 'scale', 'background_values', 'background_bounds', 'racah', 'variation_HFparam', 'set_values', 'set_boundaries', 'set_priors', 
     'expressions', 'variation_param', 'share_params', 'fwhmg', 'fwhml']
     _all_plot_args = ['legend_fontsize', 'ax_fontsize', 'ticker_locator', 'ticker_fontsize', 'nrows', 'ncols', 'data_ecolor', 'data_fillstyle', 'data_markersize', 'data_fmt', 
     'range_x', 'range_y']

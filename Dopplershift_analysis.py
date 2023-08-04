@@ -264,7 +264,7 @@ class Dopplershift_data:
         '''
         if method.lower() == 'avg':
              data['iscool_voltage'] = np.average(data['iscool_voltage'])*ISCOOL_voltage_multiplier
-        elif method.lower() == 'spline_ISCOOL':
+        elif method.lower() == 'spline_iscool':
             data['iscool_voltage'] = filter_ISCOOL(self._DATA_FOLDER[:-1], self.mass_range, filename = filename, ISCOOL_voltage_multiplier = ISCOOL_voltage_multiplier)(data['timestamp_copy'])
         elif method.lower() == 'savgol': 
             data['iscool_voltage'] = filter_ISCOOL(self._DATA_FOLDER[:-1], self.mass_range, filename = filename, ISCOOL_voltage_multiplier = ISCOOL_voltage_multiplier, method = 'savgol', **args)(data['timestamp_copy'])
@@ -314,7 +314,7 @@ class Dopplershift_data:
         else:
             correction = 0
             print('you did not choose a valid reference option')
-        if correction > 100:
+        if np.all(correction > 100):
             print('DIODE CORRECTION BIGGER THAN 100 /CM. Reference diode wavenumber might be off')
         for name in self._devices['wavemeter'][2:]: # [2:] because we do not use timestamp or offset here
             if name != self._ref_channel:
