@@ -1,30 +1,7 @@
 from interpolate_refscans_centroid import *
 from HFFit_baseclass import *
+import matplotlib.ticker as ticker
 from typing import Tuple
-
-def check_ref(initial_param: dict, MASS: int, I_ref: float, mass_ref: int) -> bool:
-    '''checks if the scan is the reference isomer scan
-
-        Parameters
-        ----------
-        initial_param: dict
-            Dictionary of dictionaries where the top dictionary represent the different models with as keys the model names, and the bottom dictionaries the different 
-            parameters that are associated with each model. eg {model_name1: {'I':3, 'J':[0.5,1.5], etc.}, model_name2:{'background_values':[15,10], 'background_bounds':[0]}, etc.} 
-        MASS: int
-            mass number of the scan
-        I_ref: float
-            spin of the reference isomer
-        mass_ref: int
-            mass number of the reference isomer
-        Returns
-        -------
-        bool
-        '''
-    for model_name in initial_param.keys():
-        if model_name[0].lower() == 's':
-            if  initial_param[model_name]['I'] == I_ref and MASS == mass_ref:
-                return True
-    return False
 
 def param_test_plot(nb_datasets: int, fig: plt.figure, ax: Union[plt.Axes, ArrayLike], data: ArrayLike, initial_param: dict, range_x: list, **plot_kwargs) -> Union[plt.Axes,ArrayLike]:
     '''plots initial parameter guess together with the data
@@ -184,7 +161,75 @@ def param_plot(nb_datasets: int, fig: plt.figure, ax: Union[plt.Axes,ArrayLike],
         ax[0][dataset_nb].legend(fontsize = HF_fitter._plot_args['legend_fontsize'])
     return ax
 
-def fitter(test: bool, save: bool, llh: bool, interp_method: str, data: list, initial_param: dict, plot_param: dict, MASS: int, mass_ref: int, I_ref: float, SCANS: list, 
+def check_ref(initial_param: dict, MASS: int, mass_ref: int, I_ref: float) -> bool:
+    '''checks if the scan is the reference isomer scan
+
+        Parameters
+        ----------
+        initial_param: dict
+            Dictionary of dictionaries where the top dictionary represent the different models with as keys the model names, and the bottom dictionaries the different 
+            parameters that are associated with each model. eg {model_name1: {'I':3, 'J':[0.5,1.5], etc.}, model_name2:{'background_values':[15,10], 'background_bounds':[0]}, etc.} 
+        MASS: int
+            mass number of the scan
+        I_ref: float
+            spin of the reference isomer
+        mass_ref: int
+            mass number of the reference isomer
+        Returns
+        -------
+        bool
+        '''
+    for model_name in initial_param.keys():
+        if model_name[0].lower() == 's':
+            if  initial_param[model_name]['I'] == I_ref and MASS == mass_ref:
+                return True
+    return False
+
+def reference_scan_correction(interp_method: str, data: ArrayLike, MASS: int, mass_ref: int, I_ref: float, SCANS: list, DATA_FOLDER: str, name: str = 'GP_MAP', scale_redchi: bool = False, plot: bool = False) -> ArrayLike:
+    '''Returns the data where the x is shifted with the reference scan centroid following a spline or gaussian process
+
+        Parameters
+        ----------
+        interp_method: str
+            which method is used for the reference centroid, gaussian process or spline
+        data: ArrayLike
+            all the (binned) data
+        MASS: int
+            the mass for the isotope
+        mass_ref: int
+            the mass of the reference isotope
+        I_ref: float
+            the spin of the reference state
+        SCANS: list
+            the scans for this state
+        DATA_FOLDER: str
+            path to data (just before Data\\)
+        name: str, default: GP_MAP
+            name of the file where the MAP of the gaussian process is stored
+        scale_redchi: bool, default: False
+            whether to scale the uncertainties on the reference centroid before doing the spline (I dont think it matters tbh, so maybe i should remove this)
+        plot: bool, default: False
+            whether to plot the spline
+
+        Returns
+        -------
+        ArrayLike
+        '''
+
+    nb_datasets = len(data)
+    if interp_method.lower() in ['gp', 'gaussian process', 'gaussian_process', 'gaussian-process', 'gaussianprocess']:
+        for nb in range(nb_datasets):
+            median_time_dataset = np.median(pd.read_csv(DATA_FOLDER + 'Data\\' + str(MASS) + '\\scan_' + str(SCANS[nb]) + '\\tagger_ds.csv' , sep = ';', header = None, names = ['timestamp', 'offset', 'bunch_no', 'events_per_bunch', 'channel', 'delta_t'])['timestamp'])
+            data[nb][:,0] = data[nb][:,0] - np.median(GP_refscans_centroid(os.getcwd()+'\\', name)['MAPcentroid'].loc[np.isclose(GP_refscans_centroid(os.getcwd()+'\\', name)['median_timestamp_copy'], median_time_dataset)])
+    elif interp_method.lower() in ['spline', 'interpolation', 'interpolate', 'linear spline', 'linearspline', 'linear_spline', 'linear-spline']:
+        for nb in range(nb_datasets):
+            median_time_dataset = np.median(pd.read_csv(DATA_FOLDER + 'Data\\' + str(MASS) + '\\scan_' + str(SCANS[nb]) + '\\tagger_ds.csv' , sep = ';', header = None, names = ['timestamp', 'offset', 'bunch_no', 'events_per_bunch', 'channel', 'delta_t'])['timestamp'])
+            data[nb][:,0] = data[nb][:,0] - spline_refscans_centroid(DATA_FOLDER, mass_ref, I_ref, scale_redchi, plot)(median_time_dataset)
+    else:
+        raise NotImplementedError()
+    return data
+
+def fitter(test: bool, save: bool, interp_method: str, llh: bool, data: list, initial_param: dict, plot_param: dict, MASS: int, mass_ref: int, I_ref: float, SCANS: list, 
     DATA_FOLDER: str, SAVEPATH_FIG: str, SAVEPATH_PARAM: str, **llh_kwargs) -> Tuple[plt.figure,plt.Axes,satlas2.Fitter]:
     '''plots fitted parameter together with the data
 
@@ -219,17 +264,14 @@ def fitter(test: bool, save: bool, llh: bool, interp_method: str, data: list, in
             path to where the figures should be saved
         SAVEPATH_PARAM: str
             path to where the fitted HF parameters should be saved
+        
         Returns
         -------
         tuple of plt.figure, list of plt.Axes, satlas2.Fitter
         '''
     nb_datasets = len(data)
-    bool_plot = False
-    if interp_method.lower() == 'gp':
-        bool_plot = True
-    if not check_ref(initial_param, MASS, I_ref, mass_ref):
-        for nb in range(nb_datasets):
-            data[nb][:,0] = data[nb][:,0] - interpolate_refscans_centroid(DATA_FOLDER + 'Final_analysis_output\\Fitted_HFS_param\\' + str(mass_ref) + '_' + str(I_ref) + '\\', method = interp_method, plot = bool_plot)(int(SCANS[nb]))
+    if not check_ref(initial_param = initial_param, MASS = MASS, mass_ref = mass_ref, I_ref = I_ref):
+        data = reference_scan_correction(interp_method = interp_method, data = data, MASS = MASS, mass_ref = mass_ref, I_ref = I_ref, SCANS = SCANS, DATA_FOLDER = DATA_FOLDER, name = 'GP_MAP', scale_redchi = False, plot = False)
     data = np.concatenate(data).T
     if test:
         fig,ax = plt.subplots(nrows = 1, ncols = nb_datasets, figsize = (14,9))
@@ -237,14 +279,18 @@ def fitter(test: bool, save: bool, llh: bool, interp_method: str, data: list, in
             range_x = plot_param.get('range_x',[np.min(data[0]), np.max(data[0])]), fmt = 'r-', label = 'Dopplershifted data', ecolor = 'k', capsize = 2) 
         return fig,ax,0
     else:
-        F = HF_fitter(MASS = MASS, SCANS = SCANS, x = data[0], y = data[2], xerr = data[1], yerr = data[3], bunches = data[4], input_param = initial_param, 
+        F = HF_fitter(MASS = MASS, SCANS = SCANS, x = data[0], y = data[2], xerr = data[1], yerr = data[3], bunches = data[4], input_param = initial_param,
+            save_paths = [SAVEPATH_PARAM, SAVEPATH_FIG],  
             nrows = 2, ncols = nb_datasets, **plot_param)
         fig,ax = plt.subplots(nrows = 2, ncols = nb_datasets, figsize = (14,9), sharex = 'col', sharey = plot_param.get('sharey',False))
         F.init_all_models(F._input_param)
-        fitter = F.fit_model(fig = fig, axs = ax, show_correl = False, llh = llh, **llh_kwargs)
+        fitter = F.fit_model(show_correl = False, llh = llh, **llh_kwargs)
         ax = param_plot(nb_datasets, fig, ax, data, F)
         if save:
             result_df = F.save_results()
-            fig.savefig(f'{F._savepath_fig}\\scan-{SCANS[0]}.png', dpi = 300, bbox_inches = 'tight')
+            if len(SCANS) == 2:
+                fig.savefig(f'{F._savepath_fig}\\scan-{SCANS[0]}-{SCANS[1]}.png', dpi = 300, bbox_inches = 'tight')
+            else:
+                fig.savefig(f'{F._savepath_fig}\\scan-{SCANS[0]}.png', dpi = 300, bbox_inches = 'tight')
             return fig,ax,result_df
         return fig,ax,F.fitter

@@ -43,7 +43,7 @@ def filter_ISCOOL(path: str, mass_range: list, filename: str, ISCOOL_voltage_mul
         scipy.interpolate.interp1d
         '''
 	if method.lower() == 'spline_iscool':
-		return interpolateISCOOL(path = path, mass_range = mass_range, filename = filename, plot = plot)
+		return interpolateISCOOL(path = path, mass_range = mass_range, filename = filename, ISCOOL_voltage_multiplier = ISCOOL_voltage_multiplier, plot = plot)
 	elif method.lower() == 'savgol':
 		args.setdefault('deriv',0) 
 		args.setdefault('delta',1) 
