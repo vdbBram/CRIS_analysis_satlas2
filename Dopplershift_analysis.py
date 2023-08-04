@@ -189,7 +189,6 @@ class Dopplershift_data:
         data = data[s]
         return data
 
-    # data is the data (all!) that you get from self.extract_raw_data(...), list of 2 elements manual giving the bounds for the TOF gate or False if you dont want a manual TOF gate
     # Note: I should change this to the actual values instead of the indices but this is for future me, USE PEAK UTILS PACKAGE LATER...
     def gate_tof(self, data: pd.DataFrame, manual: Union[list,bool] = False) -> pd.DataFrame:
         '''TOF gate function to automatically detect a TOF peak and gate on this peak, or gate on a manual TOF interval.
@@ -411,6 +410,7 @@ class Dopplershift_data:
         groups = data.groupby('digit_index')
         df = pd.DataFrame()
         df[['x','xerr']] = groups[self._wn_channel].agg([np.mean,np.std])
+        df['xerr'] = df['xerr'].fillna(0)
         df['x'] = (df['x'] - self._transition_wavenumber) * 29979.2458 
         df['xerr'] = df['xerr'] * 29979.2458
         df['y'] = (groups.count()['timestamp_copy'] - groups['delta_t'].agg(lambda x: x.le(0).sum())) # minus the empty bunches, doesnt matter if you take timestamp or smt else
@@ -448,6 +448,7 @@ class Dopplershift_data:
         groups = data.groupby('digit_index')
         df = pd.DataFrame()
         df[['x','xerr']] = groups[self._wn_channel].agg([np.mean,np.std])
+        df['xerr'] = df['xerr'].fillna(0)
         df['x'] = (df['x'] - self._transition_wavenumber) * 29979.2458
         df['xerr'] = df['xerr'] * 29979.2458
         df['y'] = (groups.count()['timestamp_copy'] - groups['delta_t'].agg(lambda x: x.le(0).sum())) # minus the empty bunches, doesnt matter if you take timestamp or smt else
