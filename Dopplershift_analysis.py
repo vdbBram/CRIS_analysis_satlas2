@@ -1,6 +1,8 @@
 import scipy.constants as csts
 from uncertainties import ufloat as uf
 import uncertainties.unumpy as unumpy
+from scipy.stats import chi2
+from scipy.signal import find_peaks
 from typing import Union
 from numpy.typing import ArrayLike
 try:
@@ -13,8 +15,8 @@ except:
 # change the some of the class variables to what you need. This is just for silver
 class Dopplershift_data:
 
-    _magneTOF_signal_ch = 1
-    _magneTOF_noise_ch = 3
+    _signal_ch = 1
+    _noise_ch = 3
     _ref_channel = 'wavenumber_2' 
     _reference = 'diode' # 'diode' or 'hene'
     diode_wavenumber = 12578.84915 #12816.470353 # /cm
@@ -143,8 +145,8 @@ class Dopplershift_data:
         pd.DataFrame
         '''
         data['noise'] = False
-        signal_data = data[(data['channel'] == self._magneTOF_signal_ch)]
-        noise_data = data[(data['channel'] == self._magneTOF_noise_ch)]
+        signal_data = data[(data['channel'] == self._signal_ch)]
+        noise_data = data[(data['channel'] == self._noise_ch)]
         for timestamp in signal_data['timestamp_copy']:
             if timestamp in noise_data['timestamp_copy']:
                 try:
@@ -161,12 +163,12 @@ class Dopplershift_data:
                     indices_noise = np.argwhere(noise_bool).T[0]
                     data['channel'][timestamp].iloc[indices_noise] = 5 # dummy channel so it gets discarded later
                     data['noise'][timestamp].iloc[indices_noise] = False # remove flag so it does not get converted to an empty bunch
-        data.loc[(data['channel'] == self._magneTOF_noise_ch),'noise'] = True
+        data.loc[(data['channel'] == self._noise_ch),'noise'] = True
         data.loc[(data['noise'] == True),'channel'] = -1
         data.loc[(data['noise'] == True),'delta_t'] = -0.005
         s = np.logical_or.reduce([
                                 data['channel'] == -1, 
-                                data['channel'] == self._magneTOF_signal_ch,
+                                data['channel'] == self._signal_ch,
                                 ])
         data = data[s]
         return data
@@ -184,7 +186,7 @@ class Dopplershift_data:
         '''
         s = np.logical_or.reduce([
                                 data['channel'] == -1, 
-                                data['channel'] == self._magneTOF_signal_ch,
+                                data['channel'] == self._signal_ch,
                                 ])
         data = data[s]
         return data
@@ -211,7 +213,7 @@ class Dopplershift_data:
             tfig, tax = plt.subplots(figsize = (14,9))
             plt.plot(tof_centers, tof, label = 'Counts per bunch')
             plt.axvspan(manual[0], manual[1], color = 'orange', alpha = 0.5, label = 'Time gate')
-            plt.xlim([0,TOF_spectrum[0][manual[1]] + 50])            
+            plt.xlim([0,manual[1] + 50])            
             plt.xlabel(r'Time since bunch release ($\mu$s)', fontsize = 25)
             tax.tick_params(axis='both', which='major', labelsize=20)
             plt.ylabel('Counts', fontsize = 25)
@@ -263,11 +265,11 @@ class Dopplershift_data:
         pd.DataFrame
         '''
         if method.lower() == 'avg':
-             data['iscool_voltage'] = np.average(data['iscool_voltage'])*ISCOOL_voltage_multiplier
+             data.loc[data['iscool_voltage'] > 0, 'iscool_voltage'] = np.average(data['iscool_voltage'])*ISCOOL_voltage_multiplier
         elif method.lower() == 'spline_iscool':
-            data['iscool_voltage'] = filter_ISCOOL(self._DATA_FOLDER[:-1], self.mass_range, filename = filename, ISCOOL_voltage_multiplier = ISCOOL_voltage_multiplier)(data['timestamp_copy'])
+            data.loc[data['iscool_voltage'] > 0, 'iscool_voltage'] = filter_ISCOOL(self._DATA_FOLDER[:-1], self.mass_range, filename = filename, ISCOOL_voltage_multiplier = ISCOOL_voltage_multiplier)(data['timestamp_copy'])
         elif method.lower() == 'savgol': 
-            data['iscool_voltage'] = filter_ISCOOL(self._DATA_FOLDER[:-1], self.mass_range, filename = filename, ISCOOL_voltage_multiplier = ISCOOL_voltage_multiplier, method = 'savgol', **args)(data['timestamp_copy'])
+            data.loc[data['iscool_voltage'] > 0, 'iscool_voltage'] = filter_ISCOOL(self._DATA_FOLDER[:-1], self.mass_range, filename = filename, ISCOOL_voltage_multiplier = ISCOOL_voltage_multiplier, method = 'savgol', **args)(data['timestamp_copy'])
         else:
             raise RuntimeError('Not yet implemented, implement the filter u want urself, u lazy fk')
         return data
@@ -287,12 +289,12 @@ class Dopplershift_data:
         '''
         if self._voltage_scanning:
             try:
-                data['cec_measured_voltage'] = data['cec_measured_voltage']*1000*calibration_factor #because voltage divider
-                data['voltage'] = data['iscool_voltage'] - data['cec_measured_voltage']
+                data.loc[data['cec_measured_voltage'] > -999999, 'cec_measured_voltage'] = data['cec_measured_voltage']*1000*calibration_factor #because voltage divider
+                data.loc[data['voltage'] > -999999, 'voltage'] = data['iscool_voltage'] - data['cec_measured_voltage']
             except:
                 raise RuntimeError('No cec_voltage file loaded, change voltage_scanning to False')
         else:
-            data['voltage'] = data['iscool_voltage']
+            data.loc[data['voltage'] > -999999, 'voltage'] = data['iscool_voltage']
         return data
 
     def apply_wavenumber_correction(self, data: pd.DataFrame) -> pd.DataFrame:
@@ -318,7 +320,7 @@ class Dopplershift_data:
             print('DIODE CORRECTION BIGGER THAN 100 /CM. Reference diode wavenumber might be off')
         for name in self._devices['wavemeter'][2:]: # [2:] because we do not use timestamp or offset here
             if name != self._ref_channel:
-                data[name] = data[name] - correction
+                data.loc[data[name] > -999999, name] = data[name] - correction
         return data
 
     def gate_wavenumber(self, data: pd.DataFrame, wavenumber: str) -> pd.DataFrame:
@@ -417,7 +419,9 @@ class Dopplershift_data:
         df['yerr'] = np.sqrt(df['y'])
         df['bunches'] = ([len(array) for array in list(groups['timestamp_copy'].unique())])
         df = df.sort_values(by = ['x']) # put it in dataframe and sort by x for convenience but it is not needed at all
-        df.loc[df['yerr'] == 0, 'yerr'] = 1/np.sqrt(np.array(df['bunches'][df['yerr'] == 0])) # to calculate the errors at 0 events recorded
+        yerr_h, yerr_l = (self.poisson_interval_high(df['y'])-df['y']),(df['y'] - self.poisson_interval_low(df['y']))
+        df['yerr'] = yerr_h
+        # df.loc[df['yerr'] == 0, 'yerr'] = 1/np.sqrt(np.array(df['bunches'][df['yerr'] == 0])) # to calculate the errors at 0 events recorded
         return df
 
     def bin_wm_data(self, data: pd.DataFrame, freq_multiplier: int) -> pd.DataFrame:
@@ -455,8 +459,135 @@ class Dopplershift_data:
         df['yerr'] = np.sqrt(df['y'])
         df['bunches'] = ([len(array) for array in list(groups['bunch_no'].unique())])
         df = df.sort_values(by = ['x']) # put it in dataframe and sort by x for convenience but it is not needed at all
-        df.loc[df['yerr'] == 0, 'yerr'] = 1/np.sqrt(np.array(df['bunches'][df['yerr'] == 0])) # to calculate the errors at 0 events recorded
+        yerr_h, yerr_l = (self.poisson_interval_high(df['y'])-df['y']),(df['y'] - self.poisson_interval_low(df['y']))
+        df['yerr'] = yerr_h
+        # df.loc[df['yerr'] == 0, 'yerr'] = 1/np.sqrt(np.array(df['bunches'][df['yerr'] == 0])) # to calculate the errors at 0 events recorded
         return df
+
+    def bin_time_data(self, data: pd.DataFrame, binsize: Union[float,int]) -> pd.DataFrame:
+        '''Bin time data for decay spectroscopy
+        first the bins are initialised with the given binsize
+        the data is grouped in each bin by time
+        In each bin the x and xerr is calculated
+        the counts per bin are calculated by counting the amount of rows minus the amount of rows that are empty bunches
+        yerr is the sqrt of this
+        The bunches are calculated by counting the amount of unique bunch numbers in each bin
+        The binned data is sorted wrt x
+        for completely empty bins the yerr is approximated by the biggest error given by the chi2 distribution
+
+        Parameters
+        ----------
+        data: pd.Dataframe
+            all the data for this scan
+        binsize: float, int
+            binsize in seconds
+        Returns
+        -------
+        pd.DataFrame
+        '''
+        data['timestamp_copy'] = data['timestamp_copy']
+        time_bins = np.arange(np.min(data['timestamp_copy']), np.max(data['timestamp_copy']),binsize)
+        data['digit_index'] = np.digitize(data['timestamp_copy'], time_bins) 
+        groups = data.groupby('digit_index')
+        df = pd.DataFrame()
+        df[['x', 'xerr']] = groups['timestamp_copy'].agg([np.mean,np.std])
+        df['xerr'] = df['xerr'].fillna(0)
+        df['x'] = df['x'] - np.min(df['x'])
+        df['y'] = (groups.count()['timestamp_copy'] - groups['delta_t'].agg(lambda x: x.le(0).sum())) 
+        df['yerr'] = np.sqrt(df['y'])
+        df['bunches'] = ([len(array) for array in list(groups['bunch_no'].unique())])
+        df = df.sort_values(by = ['x']) # put it in dataframe and sort by x for convenience but it is not needed at all
+        yerr_h, yerr_l = (self.poisson_interval_high(df['y'])-df['y']),(df['y'] - self.poisson_interval_low(df['y']))
+        df['yerr'] = yerr_h
+        # df.loc[df['yerr'] == 0, 'yerr'] = 1/np.sqrt(np.array(df['bunches'][df['yerr'] == 0])) # to calculate the errors at 0 events recorded
+        return df
+
+    def cut_data(self, data: pd.DataFrame, borders: ArrayLike):
+        '''Specialised function to cut implantation away from decay spectroscopy data
+
+        Parameters
+        ----------
+        data: pd.Dataframe
+            all the data for this scan
+        borders: ArrayLike
+            Array of all the borders for the intervals
+        Returns
+        -------
+        pd.DataFrame
+        '''
+        concat_data = []
+        for i,border in enumerate(borders):
+            if i+1 < len(borders) and not i % 2:
+                temp_data = data.loc[(data['x'] >= borders[i]) & (data['x'] < borders[i+1])]
+                temp_data['x'] = temp_data['x'] - np.min(temp_data['x'])
+                concat_data.append(temp_data)
+        df = pd.concat(concat_data)
+        return df
+
+    def rebin(self, data: pd.DataFrame, binsize: Union[float,int]) -> pd.DataFrame:
+        '''Specialised function to rebin decay spectroscopy data
+
+        Parameters
+        ----------
+        data: pd.Dataframe
+            all the data for this scan
+        binsize: float, int
+            binsize in seconds
+        Returns
+        -------
+        pd.DataFrame
+        '''
+        time_bins = np.arange(np.min(data['x']), np.max(data['x']),binsize)
+        data['digit'] = np.digitize(data['x'], time_bins) 
+        groups = data.groupby('digit')
+        df = pd.DataFrame()
+        df[['x', 'xerr']] = groups['x'].agg([np.mean,np.std])
+        df['xerr'] = df['xerr'].fillna(0)
+        df['y'] = groups.sum()['y']
+        df['yerr'] = np.sqrt(df['y'])
+        df['bunches'] = ([len(array) for array in list(groups['y'])])
+        df = df.sort_values(by = ['x']) # put it in dataframe and sort by x for convenience but it is not needed at all
+        yerr_h, yerr_l = (self.poisson_interval_high(df['y'])-df['y']),(df['y'] - self.poisson_interval_low(df['y']))
+        df['yerr'] = yerr_h
+        return df
+
+    def plot_time(self, data: pd.DataFrame, fig: plt.figure, ax: Union[plt.Axes, ArrayLike], save: bool = False, save_format: str = 'png', **kwargs) -> plt.figure:
+        '''plot and save figure in given format for time data
+
+        Parameters
+        ----------
+        data: pd.Dataframe
+            Analysed data for this scanm
+        fig: plt.figure
+            figure object to plot in
+        ax: plt.Axes
+            axes object for each subplot
+        save: bool, default: False
+            True if the figure needs to be saved
+        save_format: str, default: 'png'
+            format for the saved figure, eg. png, svg
+        **kwargs
+            plt.errorbar arguments
+            See: https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.errorbar.html
+        Returns
+        -------
+        matplotlib.pyplot.figure
+        '''
+        # ax.errorbar(data['x'], data['y'], xerr = data['xerr'], yerr = data['yerr'], fmt = 'r.', fillstyle = 'none', markersize = 10, capsize = 2, ecolor = 'k', label = 'Dopplershifted data')
+        plt.errorbar(data['x'], data['y']/data['bunches'], xerr = data['xerr'], yerr = data['yerr']/data['bunches'], capsize = 2, ecolor = 'k', **kwargs)
+        plt.legend(fontsize = 16)
+        plt.xticks(fontsize=20)
+        plt.yticks(fontsize=20)
+        plt.xlabel('Timestamp [s]', fontsize = 25)
+        plt.ylabel('Countrate per ion bunch', fontsize = 25)
+        plt.tick_params(axis='both', which='major', labelsize=20)
+        if save:
+            try:
+                fig.savefig(f'{self._SAVEPATH_FIG}{self._scan}_wm_{self._wn_channel[11:]}.{save_format}', dpi = 400, bbox_inches='tight')
+            except:
+                os.mkdir(self._SAVEPATH_FIG)
+                fig.savefig(f'{self._SAVEPATH_FIG}{self._scan}_wm_{self._wn_channel[11:]}.{save_format}', dpi = 400, bbox_inches='tight')
+        return fig
 
     def save_data(self, data: pd.DataFrame) -> None:
         '''Save data in .csv format
@@ -496,6 +627,78 @@ class Dopplershift_data:
         '''
         # ax.errorbar(data['x'], data['y'], xerr = data['xerr'], yerr = data['yerr'], fmt = 'r.', fillstyle = 'none', markersize = 10, capsize = 2, ecolor = 'k', label = 'Dopplershifted data')
         plt.errorbar(data['x'], data['y']/data['bunches'], xerr = data['xerr'], yerr = data['yerr']/data['bunches'], capsize = 2, ecolor = 'k', **kwargs)
+        plt.legend(fontsize = 16)
+        plt.xticks(fontsize=20)
+        plt.yticks(fontsize=20)
+        plt.xlabel('Observed frequency - transition frequency [MHz]', fontsize = 70)
+        plt.xlabel('Relative frequency [MHz]', fontsize = 25)
+        plt.ylabel('Countrate per ion bunch', fontsize = 25)
+        plt.tick_params(axis='both', which='major', labelsize=20)
+        if save:
+            try:
+                fig.savefig(f'{self._SAVEPATH_FIG}{self._scan}_wm_{self._wn_channel[11:]}.{save_format}', dpi = 400, bbox_inches='tight')
+            except:
+                os.mkdir(self._SAVEPATH_FIG)
+                fig.savefig(f'{self._SAVEPATH_FIG}{self._scan}_wm_{self._wn_channel[11:]}.{save_format}', dpi = 400, bbox_inches='tight')
+        return fig
+
+    def poisson_interval_high(self, data: ArrayLike, alpha: Union[int,float] = 0.32) -> ArrayLike:
+        '''Top error (1-sigma) for low count statistics
+
+        Parameters
+        ----------
+        data: ArrayLike
+            total amount of counts
+        alpha: int, float, default: 0.32
+            alpha value for chi2 distribution
+        Returns
+        -------
+        ArrayLike
+        '''
+        high = chi2.ppf(1 - alpha / 2, 2 * data + 2) / 2
+        return high
+
+    def poisson_interval_low(self, data: ArrayLike, alpha: Union[int,float] = 0.32) -> ArrayLike:
+        '''bottom error (1-sigma) for low count statistics
+
+        Parameters
+        ----------
+        data: ArrayLike
+            total amount of counts
+        alpha: int, float, default: 0.32
+            alpha value for chi2 distribution
+        Returns
+        -------
+        ArrayLike
+        '''
+        low = chi2.ppf(alpha / 2, 2 * data) / 2
+        low = np.nan_to_num(low)
+        return low
+
+    def plot_asymmetric(self, data: pd.DataFrame, fig: plt.figure, ax: Union[plt.Axes, ArrayLike], save: bool = False, save_format: str = 'png', **kwargs) -> plt.figure:
+        '''plot and save figure in given format with asymmetric errorbars
+
+        Parameters
+        ----------
+        data: pd.Dataframe
+            Analysed data for this scanm
+        fig: plt.figure
+            figure object to plot in
+        ax: plt.Axes
+            axes object for each subplot
+        save: bool, default: False
+            True if the figure needs to be saved
+        save_format: str, default: 'png'
+            format for the saved figure, eg. png, svg
+        **kwargs
+            plt.errorbar arguments
+            See: https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.errorbar.html
+        Returns
+        -------
+        matplotlib.pyplot.figure
+        '''
+        yerr_h, yerr_l = (self.poisson_interval_high(data['y'])-data['y'])/data['bunches'],(data['y'] - self.poisson_interval_low(data['y']))/data['bunches']
+        plt.errorbar(data['x'], data['y']/data['bunches'], xerr = data['xerr'], yerr = [yerr_l,yerr_h], capsize = 2, ecolor = 'k', **kwargs)
         plt.legend(fontsize = 16)
         plt.xticks(fontsize=20)
         plt.yticks(fontsize=20)

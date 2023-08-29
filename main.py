@@ -4,32 +4,27 @@ from HFFit_constants import *
 
 '''To do the dopplershifting'''
 ##################################################
-scan = 5383
-manual = False #[21.5,26]
-D = Dopplershift_data(mass = 58, scan = scan, voltage_scanning = True, wn_channel = 'wavenumber_1', wn_bounds = [0,99999999999])
-D._transition_wavenumber = 23386.3419
-D.bin_size_voltage = 2 # optional, it will default to 4 V but this is how you can change it
-D.bin_size_MHz = 60 # optional, it will default to 30 MHz but this is how you can change it
-D._DATA_FOLDER = "C:\\Users\\u0148746\\OneDrive - KU Leuven\\Documents\\PhD\\CRIS\\Al_6-23\\Data\\" # change the paths pls, this is for data
-D._SAVEPATH = 'C:\\Users\\u0148746\\OneDrive - KU Leuven\\Documents\\PhD\\CRIS\\Al_6-23\\Analysis_output\\' # change the paths pls, this is for saving dop[pler shifted data]
-D._SAVEPATH_FIG = 'C:\\Users\\u0148746\\OneDrive - KU Leuven\\Documents\\PhD\\CRIS\\Al_6-23\\Fig_analysis_output\\' # change the paths pls, this is for saving the figure of the dopplershifted data
-D._masses = {26:25.98689186,27:26.98153841,28:27.98191009,29:28.9804532,30:29.982968,31:30.9839498,32:31.988084,33:32.990878,34:33.996779}
-data = D.extract_raw_data(devices_to_read = D._devices, path = D._PATH)
-data = D.AdvCutNoise(data = data, threshold = 0.15)
-# data = D.SimpleCutNoise(data = data)
-try: 
-    data = D.gate_tof(data = data)
-except:
-    data = D.gate_tof(data = data, manual = manual)
-data = D.filter_scatter(data = data, filename = 'iscool2', method = 'spline_ISCOOL', ISCOOL_voltage_multiplier = 10000) # apply filter to ISCOOL, for savgol you need to include window_length and polyorder. other options are spline_ISCOOL, avg
-data = D.calibrate_CRIS_voltagemeter(data = data, calibration_factor = 1.005030) 
-data = D.apply_wavenumber_correction(data = data) # you can change the ref wavenumber channel by using eg. D._ref_channel = 'wavenumber_3', defaults to 'wavenumber_2' 
-data = D.gate_wavenumber(data = data, wavenumber = D._wn_channel) # gate the wn values in case laser lost lock or wavemeter trips, you might wait for 7min if you dont because of np.arange, etc.
-binned_data = D.bin_data(data = data, freq_multiplier = 2) # this is for voltage scans, use bin_wm_data() with same arguments for laser scanning
-fig,ax = plt.subplots(figsize = (14,9))
-fig = D.plot(data = binned_data, fig = fig, ax = ax, save = True, save_format = 'png', fmt = 'r-', label = 'Dopplershifted data') # add save = True if you want to save
-plt.show()
-D.save_data(binned_data) # saves in D._SAVEPATH, change it with D._SAVEPATH = new_save_path if you want, or change it in the class variables, defaults to the one in the class
+# scan = 5383
+# manual = False #[21.5,26]
+# D = Dopplershift_data(mass = 58, scan = scan, voltage_scanning = True, wn_channel = 'wavenumber_1', wn_bounds = [0,99999999999])
+# D.bin_size_voltage = 2 # optional, it will default to 4 V but this is how you can change it
+# D.bin_size_MHz = 60 # optional, it will default to 30 MHz but this is how you can change it
+# data = D.extract_raw_data(devices_to_read = D._devices, path = D._PATH)
+# data = D.AdvCutNoise(data = data, threshold = 0.15)
+# # data = D.SimpleCutNoise(data = data)
+# try: 
+#     data = D.gate_tof(data = data)
+# except:
+#     data = D.gate_tof(data = data, manual = manual)
+# data = D.filter_scatter(data = data, filename = 'iscool2', method = 'spline_ISCOOL', ISCOOL_voltage_multiplier = 10000) # apply filter to ISCOOL, for savgol you need to include window_length and polyorder. other options are spline_ISCOOL, avg
+# data = D.calibrate_CRIS_voltagemeter(data = data, calibration_factor = 1.005030) 
+# data = D.apply_wavenumber_correction(data = data) # you can change the ref wavenumber channel by using eg. D._ref_channel = 'wavenumber_3', defaults to 'wavenumber_2' 
+# data = D.gate_wavenumber(data = data, wavenumber = D._wn_channel) # gate the wn values in case laser lost lock or wavemeter trips, you might wait for 7min if you dont because of np.arange, etc.
+# binned_data = D.bin_data(data = data, freq_multiplier = 2) # this is for voltage scans, use bin_wm_data() with same arguments for laser scanning
+# fig,ax = plt.subplots(figsize = (14,9))
+# fig = D.plot(data = binned_data, fig = fig, ax = ax, save = True, save_format = 'png', fmt = 'r-', label = 'Dopplershifted data') # add save = True if you want to save
+# plt.show()
+# D.save_data(binned_data) # saves in D._SAVEPATH, change it with D._SAVEPATH = new_save_path if you want, or change it in the class variables, defaults to the one in the class
 
 '''To do 1 state in 1 figure fitting'''
 # ##################################################

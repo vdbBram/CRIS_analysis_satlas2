@@ -79,7 +79,7 @@ def create_spin_label(inputstring: str) -> str:
     pre__,post__ = inputstring.split('__')[0],inputstring.split('__')[1]
     if len(post__.split('_')) > 1:
         val,dec_val = post__.split('_')[0],post__.split('_')[1]
-        spin = float(val+'.'+dec_val)
+        spin = int(val)/int(dec_val)
     else:
         spin = int(post__)
     return 'I = ' + convert_decimalstring_fractionstring(spin)
@@ -91,7 +91,7 @@ class HF_fitter:
     'expressions', 'variation_param', 'share_params', 'fwhmg', 'fwhml']
     _all_plot_args = ['legend_fontsize', 'ax_fontsize', 'ticker_locator', 'ticker_fontsize', 'nrows', 'ncols', 'data_ecolor', 'data_fillstyle', 'data_markersize', 'data_fmt', 
     'range_x', 'range_y']
-    _colors = ['orange', 'green', 'darkorchid']
+    _colors = ['orange', 'green', 'darkorchid', 'pink', 'blue']
     # save_path = {save_folder_param, save_folder_fig}
     def __init__(self, MASS: int, SCANS: list, x: ArrayLike, y: ArrayLike, xerr: ArrayLike, yerr: ArrayLike, bunches: Union[ArrayLike, int], input_param: dict, 
         save_paths: list, **plot_args) -> None:
@@ -338,3 +338,12 @@ class HF_fitter:
                 os.mkdir(self._savepaths_param[self.hf_models[0].name])
                 self.result_DataFrame.to_csv(self._savepaths_param[self.hf_models[0].name] + '\\scan-' + str(self._scans[0]) + '.csv', sep = ';')
         return self.result_DataFrame
+
+    def get_yerr(self) -> ArrayLike:
+        '''Returns the yerr saved in the datasource, which is scaled with nd.Derivative * xerr if xerr is given
+
+        Returns
+        -------
+        ArrayLike
+        '''
+        return self.datasource.yerr()
