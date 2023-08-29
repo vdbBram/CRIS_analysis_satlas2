@@ -1,6 +1,7 @@
 from interpolate_refscans_centroid import *
 from HFFit_baseclass import *
 import matplotlib.ticker as ticker
+from scipy.stats import chi2
 from typing import Tuple
 
 def param_test_plot(nb_datasets: int, fig: plt.figure, ax: Union[plt.Axes, ArrayLike], data: ArrayLike, initial_param: dict, range_x: list, **plot_kwargs) -> Union[plt.Axes,ArrayLike]:
@@ -37,10 +38,11 @@ def param_test_plot(nb_datasets: int, fig: plt.figure, ax: Union[plt.Axes, Array
                 continue
             mod_init_param = initial_param[list(initial_param.keys())[i]]
             testmodel = satlas2.HFS(I = mod_init_param['I'], J = mod_init_param['J'], A = mod_init_param['ABC'][0:2], B = mod_init_param['ABC'][2:4], C = mod_init_param['ABC'][4:], 
-            df = mod_init_param['centroid'], scale = mod_init_param['scale'], racah = False, name = 'HFSmodel_'+str(mod_init_param['I']))
+            df = mod_init_param['centroid'], scale = mod_init_param['scale'], racah = False, name = 'HFSmodel_'+str(mod_init_param['I']),
+            fwhmg = mod_init_param.get('fwhmg',50), fwhml = mod_init_param.get('fwhml',50))
             testsource.addModel(testmodel)
             freq_range = np.arange(range_x[0],range_x[1],1)
-            response_testmodel =  testmodel.f(freq_range)# + tmodel.f(freq_range)
+            response_testmodel =  testmodel.f(freq_range)
             ax.plot(freq_range, response_testmodel, '-', color = colors[i], label = 'Initial guess model I = ' + convert_decimalstring_fractionstring(mod_init_param['I']))
         ax.legend(fontsize = 20)
         tmodel = satlas2.Polynomial(initial_param[model_name]['background_values'], name = 'bkg')
@@ -56,7 +58,8 @@ def param_test_plot(nb_datasets: int, fig: plt.figure, ax: Union[plt.Axes, Array
                 continue
             mod_init_param = initial_param[list(initial_param.keys())[i]]
             testmodel = satlas2.HFS(I = mod_init_param['I'], J = mod_init_param['J'], A = mod_init_param['ABC'][0:2], B = mod_init_param['ABC'][2:4], C = mod_init_param['ABC'][4:], 
-            df = mod_init_param['centroid'], scale = mod_init_param['scale'], racah = False, name = 'HFSmodel_'+str(mod_init_param['I']))
+            df = mod_init_param['centroid'], scale = mod_init_param['scale'], racah = False, name = 'HFSmodel_'+str(mod_init_param['I']),
+            fwhmg = mod_init_param.get('fwhmg',50), fwhml = mod_init_param.get('fwhml',50))
             testsource.addModel(testmodel)
             freq_range = np.arange(range_x[dataset_nb][0],range_x[dataset_nb][1],1)
             response_testmodel =  testmodel.f(freq_range)
@@ -102,6 +105,40 @@ def set_plot_labels(ax: Union[plt.Axes, ArrayLike], fitter: HF_fitter, nb_datase
             ax[1][dataset_nb].tick_params(axis='both', which='major', labelsize=fitter._plot_args['ticker_fontsize'])
     return ax
 
+def poisson_interval_high(data: ArrayLike, alpha: Union[int,float] = 0.32) -> ArrayLike:
+    '''Top error (1-sigma) for low count statistics
+
+    Parameters
+    ----------
+    data: ArrayLike
+        total amount of counts
+    alpha: int, float, default: 0.32
+        alpha value for chi2 distribution
+    Returns
+    -------
+    ArrayLike
+    '''
+    high = chi2.ppf(1 - alpha / 2, 2 * data + 2) / 2
+    return high
+
+def poisson_interval_low(data: ArrayLike, alpha: Union[int,float] = 0.32) -> ArrayLike:
+    '''bottom error (1-sigma) for low count statistics
+
+    Parameters
+    ----------
+    data: ArrayLike
+        total amount of counts
+    alpha: int, float, default: 0.32
+        alpha value for chi2 distribution
+    Returns
+    -------
+    ArrayLike
+    '''
+    low = chi2.ppf(alpha / 2, 2 * data) / 2
+    low = np.nan_to_num(low)
+    return low
+
+
 def param_plot(nb_datasets: int, fig: plt.figure, ax: Union[plt.Axes,ArrayLike], data: ArrayLike, HF_fitter: HF_fitter) -> Union[plt.Axes,ArrayLike]:
     '''plots fitted parameter together with the data
 
@@ -121,9 +158,18 @@ def param_plot(nb_datasets: int, fig: plt.figure, ax: Union[plt.Axes,ArrayLike],
         -------
         plt.Axes or ArrayLike
         '''
-    colors = (plt.get_cmap()(np.linspace(0,1,len(list(HF_fitter._input_param.keys()))+1)))
     bunches = data[4]
-    res = (HF_fitter._y - HF_fitter.datasource.evaluate(HF_fitter._x)) / np.sqrt((HF_fitter._yerr*HF_fitter._yerr)) # residuals
+    yerr_h, yerr_l = (poisson_interval_high(data[2])-data[2])/bunches,(data[2] - poisson_interval_low(data[2]))/bunches
+    denom_res = {'res': ((HF_fitter._y - HF_fitter.datasource.evaluate(HF_fitter._x))/np.abs(HF_fitter._y - HF_fitter.datasource.evaluate(HF_fitter._x)))}
+    denom_res = pd.DataFrame(data = denom_res, dtype = int)
+    denom_res.loc[denom_res['res'] > 0, 'res'], denom_res.loc[denom_res['res'] < 0, 'res'] = True, False
+    for i,res_val in enumerate(denom_res['res']):
+        if res_val == True:
+            denom_res.iloc[i, denom_res.columns.get_loc('res')] = yerr_h[i]
+        else:
+            denom_res.iloc[i, denom_res.columns.get_loc('res')] = yerr_l[i]
+    # res = (HF_fitter._y - HF_fitter.datasource.evaluate(HF_fitter._x)) / HF_fitter.get_yerr() # residuals
+    res = (HF_fitter._y - HF_fitter.datasource.evaluate(HF_fitter._x)) / denom_res['res']    
     if nb_datasets == 1:
         ax[0].errorbar(x = data[0], y = data[2]/bunches, xerr = data[1], yerr = data[3]/bunches, fmt = HF_fitter._plot_args['data_fmt'], fillstyle = HF_fitter._plot_args['data_fillstyle'], 
             markersize = HF_fitter._plot_args['data_markersize'], ecolor = HF_fitter._plot_args['data_ecolor'])
@@ -155,7 +201,7 @@ def param_plot(nb_datasets: int, fig: plt.figure, ax: Union[plt.Axes,ArrayLike],
                 break
             else:
                 freq_range = np.arange(HF_fitter._plot_args['range_x'][dataset_nb][0],HF_fitter._plot_args['range_x'][dataset_nb][1],1)
-                ax[0][dataset_nb].plot(freq_range, HF_fitter.hf_models[i].f(freq_range), '-', color = colors[i], label = create_spin_label(HF_fitter.hf_models[i].name))
+                ax[0][dataset_nb].plot(freq_range, HF_fitter.hf_models[i].f(freq_range), '-', color = HF_fitter._colors[i], label = create_spin_label(HF_fitter.hf_models[i].name))
                 ax[0][dataset_nb].plot(freq_range, HF_fitter.datasource.evaluate(freq_range), '-', color = HF_fitter._colors[0])
         ax = set_plot_labels(ax, HF_fitter, nb_datasets)
         ax[0][dataset_nb].legend(fontsize = HF_fitter._plot_args['legend_fontsize'])
@@ -224,7 +270,9 @@ def reference_scan_correction(interp_method: str, data: ArrayLike, MASS: int, ma
     elif interp_method.lower() in ['spline', 'interpolation', 'interpolate', 'linear spline', 'linearspline', 'linear_spline', 'linear-spline']:
         for nb in range(nb_datasets):
             median_time_dataset = np.median(pd.read_csv(DATA_FOLDER + 'Data\\' + str(MASS) + '\\scan_' + str(SCANS[nb]) + '\\tagger_ds.csv' , sep = ';', header = None, names = ['timestamp', 'offset', 'bunch_no', 'events_per_bunch', 'channel', 'delta_t'])['timestamp'])
-            data[nb][:,0] = data[nb][:,0] - spline_refscans_centroid(DATA_FOLDER, mass_ref, I_ref, scale_redchi, plot)(median_time_dataset)
+            data[nb][:,0] = data[nb][:,0] - spline_refscans_centroid(DATA_FOLDER, mass_ref, I_ref, plot)(median_time_dataset) # make it in median time scan and change the append
+    elif interp_method.lower() in ['none', 'no']:
+        return data
     else:
         raise NotImplementedError()
     return data

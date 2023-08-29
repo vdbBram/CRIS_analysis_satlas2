@@ -84,14 +84,13 @@ class NuclearState:
         df_data = pd.read_csv(self._CRIS_ANALYSED_DATA_PATH + '\\' + str(mass) + '_' + str(I) + '\\' + scanfile, delimiter = ';', names = self._column_names, header=0)
         models = df_data['Model'].unique()
         return_dict = dict()
-        for model in models:
-            try:
-                model_spin = model.split('__')[1]
-                for param in self._params_:
-                    return_dict[param] = float(df_data[(df_data['Model'] == model) & (df_data['Parameter'] == param)]['Value'])
-                    return_dict[param + '_err'] = float(df_data[(df_data['Model'] == model) & (df_data['Parameter'] == param)]['Stderr'])
-            except:
-                continue
+        if len(str(I).split('.')) == 1:
+            model_name = 'spin__' + str(I).split('.')[0]
+        else:
+            model_name = 'spin__' + str(int(2*I)) + '_2'
+        for param in self._params_:
+            return_dict[param] = df_data[(df_data['Model'] == model_name) & (df_data['Parameter'] == param)]['Value'].iloc[0]
+            return_dict[param + '_err'] = df_data[(df_data['Model'] == model_name) & (df_data['Parameter'] == param)]['Stderr'].iloc[0]
         return return_dict
     
     def calculate_separate_HFparam_dict(self) -> dict:
@@ -139,9 +138,9 @@ class NuclearState:
         dict
         '''
         Nuc_Prop_dict = dict()
-        Nuc_Prop_dict['Mu'] = self.calculate_Mu()
-        Nuc_Prop_dict['Q'] = self.calculate_Q()
-        Nuc_Prop_dict['Charge_radius'] = self.calculate_Charge_Radius()
+        Nuc_Prop_dict['mu'] = self.calculate_Mu()
+        Nuc_Prop_dict['q'] = self.calculate_Q()
+        Nuc_Prop_dict['charge_radius'] = self.calculate_Charge_Radius()
         return Nuc_Prop_dict
 
     def weightedAvg(self, data: ArrayLike, data_err: ArrayLike, redchi: ArrayLike = 1) -> uf:
@@ -200,4 +199,4 @@ class NuclearState:
         if self._MASS == self._mass_ref_centroid and self._I == self._I_ref_centroid:
             return uf(0,0)
         else:
-            return ((self._HFparam_dict.get('centroid',self._HFparam_dict['Centroid']) / (self._F*self._K)) - self._M * ((self._MASS-self._mass_ref_centroid) / (self._MASS*self._mass_ref_centroid)) / (self._F*self._K))
+            return ((self._HFparam_dict.get('centroid',self._HFparam_dict['centroid']) / (self._F*self._K)) - self._M * ((self._MASS-self._mass_ref_centroid) / (self._MASS*self._mass_ref_centroid)) / (self._F*self._K))
