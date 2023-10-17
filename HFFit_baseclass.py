@@ -326,17 +326,15 @@ class HF_fitter:
         self.make_save_paths()
         # add redchi
         if len(self._scans) == 2:
-            try: # C:\\Users...\\save_folder\\ + mass_I\\scan-4708.csv
-                self.result_DataFrame.to_csv(self._savepaths_param[self.hf_models[0].name] + '\\scan-' + str(self._scans[0]) + '-' + str(self._scans[1]) + '.csv', sep = ';')
-            except:
-                os.mkdir(self._savepaths_param[self.hf_models[0].name])
-                self.result_DataFrame.to_csv(self._savepaths_param[self.hf_models[0].name] + '\\scan-' + str(self._scans[0]) + '-' + str(self._scans[1]) + '.csv', sep = ';')
+            name = '\\scan-' + str(self._scans[0]) + '-' + str(self._scans[1]) + '.csv'
         else:
+            name = '\\scan-' + str(self._scans[0]) + '.csv'
+        for hfmodel in self.hf_models:
             try: # C:\\Users...\\save_folder\\ + mass_I\\scan-4708.csv
-                self.result_DataFrame.to_csv(self._savepaths_param[self.hf_models[0].name] + '\\scan-' + str(self._scans[0]) + '.csv', sep = ';')
+                self.result_DataFrame.to_csv(self._savepaths_param[hfmodel.name] + name, sep = ';')
             except:
-                os.mkdir(self._savepaths_param[self.hf_models[0].name])
-                self.result_DataFrame.to_csv(self._savepaths_param[self.hf_models[0].name] + '\\scan-' + str(self._scans[0]) + '.csv', sep = ';')
+                os.mkdir(self._savepaths_param[hfmodel.name])
+                self.result_DataFrame.to_csv(self._savepaths_param[hfmodel.name] + name, sep = ';')
         return self.result_DataFrame
 
     def get_yerr(self) -> ArrayLike:

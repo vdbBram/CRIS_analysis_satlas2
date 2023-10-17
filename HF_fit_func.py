@@ -138,7 +138,6 @@ def poisson_interval_low(data: ArrayLike, alpha: Union[int,float] = 0.32) -> Arr
     low = np.nan_to_num(low)
     return low
 
-
 def param_plot(nb_datasets: int, fig: plt.figure, ax: Union[plt.Axes,ArrayLike], data: ArrayLike, HF_fitter: HF_fitter) -> Union[plt.Axes,ArrayLike]:
     '''plots fitted parameter together with the data
 

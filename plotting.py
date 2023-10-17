@@ -24,7 +24,7 @@ class Plotting:
 	_legend_title_fontsize = 16
 	_legend_entries_done = list()
 	_legend_handles = list()
-	_param_to_extract = ['Al', 'Au', 'Bl', 'Bu', 'Centroid']
+    _param_to_extract = ['Al', 'Au', 'Bl', 'Bu', 'centroid', 'Centroid', 'Aratio']
 	_moment_to_extract = ['Mu', 'Q', 'Charge_radius', 'g-factor']
 	_lit_moment = {'101_4.5':{'Mu':uf(5.627,0.011)}, '102_2':{'Mu':uf(4.1,0.3)}, '102_5':{'Mu':uf(4.6,0.7)}, '103_3.5':{'Mu':uf(4.432,0.002)}, 
 				   '104_2':{'Mu':uf(3.691,0.003)}, '104_5':{'Mu':uf(3.916,0.008)}, '105_0.5':{'Mu':uf(-0.1014,0.0010)}, '105_3.5':{'Mu':uf(4.414,0.013)}, 
@@ -33,8 +33,8 @@ class Plotting:
 				   '110_1':{'Mu':uf(2.7271,0.0008)}, '110_6':{'Mu':uf(3.588,0.003)}, '111_0.5':{'Mu':uf(-0.146,0.002)}, '112_2':{'Mu':uf(-0.0547,0.0005)},
 				   '113_0.5':{'Mu':uf(-0.159,0.002)}}
 
-	def check_param_valid(self, getter_xy: Callable[[str,float,str,bool,int,str], Tuple[ufloat,ufloat]], param: str) -> bool:
-		'''Check wether parameter names are valid
+	def check_param_valid(self, getter_xy: Callable[[str,float,str,bool,int,str], tuple], param: str) -> bool:
+        '''Check wether parameter names are valid
 
         Parameters
         ----------
@@ -47,16 +47,14 @@ class Plotting:
         -------
         bool
         '''
-		if getter_xy == self.get_HF_moments_xy:
-			if param in self._moment_to_extract:
-				return True
-			return False
-		elif getter_xy == self.get_HF_parameters_xy:
-			if param in self._param_to_extract:
-				return True
-			return False
-		print('wtf did you put in getter_xy xddddd')
-		return False
+        if getter_xy == self.get_HF_moments_xy:
+            if param in self._moment_to_extract:
+                return True
+        elif getter_xy == self.get_HF_parameters_xy:
+            if param in self._param_to_extract:
+                return True
+        print('wtf did you put in getter_xy xddddd')
+        return False
 
 	def plot_HF_factors(self, ax: plt.Axes, dict_mass_spin: dict, param: str, getter_xy: Callable[[str,float,str,bool,int,str], Tuple[ufloat,ufloat]], scale_I: bool = False, n_proton: int = 0, **plot_kwargs) -> plt.Axes:
 		'''reads the fit parameters for a single scan file and returns a dictionary with keys the parameter names and parameter names + _err
@@ -113,8 +111,8 @@ class Plotting:
 					ax = self.ax_parameters(ax, x_value = x, y_value = y, I = I, label = 'CRIS', **plot_kwargs)
 		return self.plot_layout(ax = ax, param = param, n_proton = n_proton, legend_handles = self._legend_handles, **plot_kwargs)
 
-	def get_HF_parameters_xy(self, mass: int, I: float, param: str, scale_I: bool, n_proton: int, string_nuclear_state_class: str) -> Tuple[ufloat,ufloat]:
-		'''getter function for HF parameters, returning a tuple with the x eg mass or neutron number and y the values + errors of the selected parameter
+	def get_HF_parameters_xy(self, mass: int, I: float, param: str, scale_I: bool, n_proton: int, string_nuclear_state_class: str) -> Tuple[float,ufloat,float]:
+        '''getter function for HF parameters, returning a tuple with the x eg mass or neutron number and y the values + errors of the selected parameter
 
         Parameters
         ----------
@@ -125,39 +123,45 @@ class Plotting:
         param: str
             parameter to plot
         scale_I: bool
-        	whether to scale the parameter with I or not
+            whether to scale the parameter with I or not
         n_proton: int
-        	the amount of protons to subtract from the x-axis. eg to go from mass number to neutron number
+            the amount of protons to subtract from the x-axis. eg to go from mass number to neutron number
         string_nuclear_state_class: str
-			the facility at which the measurement was taken
+            the facility at which the measurement was taken
 
         Returns
         -------
-        tuple of ufloat of x and y value
+        tuple
         '''
-		if string_nuclear_state_class == 'IGISOL':
-			try:
-				y = IG_NS(mass, float(I[:-1])).HFparam_dict[param] 
-			except:
-				y = IG_NS(mass, int(I[:-1])).HFparam_dict[param]
-			x = self.adapt_x_nproton(mass, n_proton)
-			if scale_I:
-				y = self.scale_y_to_spin(y, I[:-1])
-			return x,y
-		elif string_nuclear_state_class == 'CRIS':
-			try:
-				y = NS(mass, float(I[:-1])).HFparam_dict[param] 
-			except:
-				y = NS(mass, int(I[:-1])).HFparam_dict[param]
-			x = self.adapt_x_nproton(mass, n_proton)
-			if scale_I:
-				y = self.scale_y_to_spin(y, I[:-1])
-			return x,y
-		else:
-			raise RuntimeError('give CRIS or IGISOL for string_nuclear_state_class')
+        if string_nuclear_state_class == 'IGISOL':
+            if param == 'Aratio':
+                try:
+                    y = IG_NS(mass, float(I[:-1]))._HFparam_dict['Al']/IG_NS(mass, float(I[:-1]))._HFparam_dict['Au'] 
+                except:
+                    y = IG_NS(mass, int(I[:-1]))._HFparam_dict['Al']/IG_NS(mass, int(I[:-1]))._HFparam_dict['Au']
+            else:
+                try:
+                    y = IG_NS(mass, float(I[:-1]))._HFparam_dict[param] 
+                except:
+                    y = IG_NS(mass, int(I[:-1]))._HFparam_dict[param]
+            x = self.adapt_x_nproton(mass, n_proton)
+            if scale_I:
+                y = self.scale_y_to_spin(y, I[:-1])
+            return x,y,0
+        elif string_nuclear_state_class == 'CRIS':
+            try:
+                y = NS(mass, float(I[:-1])).HFparam_dict[param] 
+            except:
+                y = NS(mass, int(I[:-1])).HFparam_dict[param]
+            x = self.adapt_x_nproton(mass, n_proton)
+            if scale_I:
+                y = self.scale_y_to_spin(y, I[:-1])
+            return x,y,0
+        else:
+            raise RuntimeError('give CRIS or IGISOL for string_nuclear_state_class')
 
-	def get_HF_moments_xy(self, mass: int, I: float, param: str, scale_I: bool, n_proton: int, string_nuclear_state_class: str) -> Tuple[ufloat,ufloat]:
-		'''getter function for HF moments, returning a tuple with the x eg mass or neutron number and y the values + errors of the selected parameter
+	def get_HF_moments_xy(self, mass: int, I: float, param: str, scale_I: bool, n_proton: int, string_nuclear_state_class: str) -> Tuple[float,ufloat,float]:
+        '''getter function for HF moments, returning a tuple with the x eg mass or neutron number and y the values + errors of the selected parameter
 
         Parameters
         ----------
@@ -168,51 +172,53 @@ class Plotting:
         param: str
             parameter to plot
         scale_I: bool
-        	whether to scale the parameter with I or not
+            whether to scale the parameter with I or not
         n_proton: int
-        	the amount of protons to subtract from the x-axis. eg to go from mass number to neutron number
+            the amount of protons to subtract from the x-axis. eg to go from mass number to neutron number
         string_nuclear_state_class: str
-			the facility at which the measurement was taken
+            the facility at which the measurement was taken
 
         Returns
         -------
-        tuple of ufloat of x and y value
+        tuple
         '''
-		denominator = 1
-		factor = 1
-		if param == 'g-factor':
-			param = 'Mu'
-			if I[:-1] not in ['0','1']:
-				denominator = float(I[:-1])
-		if param == 'Q':
-			factor = 100
-		if string_nuclear_state_class == 'IGISOL':
-			try:
-				y = IG_NS(mass, float(I[:-1])).Nuc_Prop_dict[param] 
-			except:
-				y = IG_NS(mass, int(I[:-1])).Nuc_Prop_dict[param]
-			x = self.adapt_x_nproton(mass, n_proton)
-			# if scale_I:
-			# 	y = self.scale_y_to_spin(y, I[:-1])
-		elif string_nuclear_state_class == 'CRIS':
-			try:
-				y = NS(mass, float(I[:-1])).Nuc_Prop_dict[param] 
-			except:
-				y = NS(mass, int(I[:-1])).Nuc_Prop_dict[param]
-			x = self.adapt_x_nproton(mass, n_proton)
-			# if scale_I:
-			# 	y = self.scale_y_to_spin(y, I[:-1])
-		elif string_nuclear_state_class == 'Literature':
-			x = self.adapt_x_nproton(mass, n_proton)
-			y = self._lit_moment[str(mass) + '_' + str(I[:-1])][param]
-		else:
-			raise RuntimeError('give CRIS or IGISOL for string_nuclear_state_class')
-		if scale_I:
-			y = self.scale_y_to_spin(y, I[:-1])
-		return x, factor*(y/denominator)
+        denominator = 1
+        factor = 1
+        if param == 'g-factor':
+            param = 'Mu'
+            if I[:-1] not in ['0','1']:
+                denominator = float(I[:-1])
+        if param == 'Q':
+            factor = 100
+        if string_nuclear_state_class == 'IGISOL':
+            try:
+                y,sys_err = IG_NS(mass, float(I[:-1]))._Nuc_Prop_dict[param] 
+            except:
+                y,sys_err = IG_NS(mass, int(I[:-1]))._Nuc_Prop_dict[param]
+            x = self.adapt_x_nproton(mass, n_proton)
+            # if scale_I:
+            #   y = self.scale_y_to_spin(y, I[:-1])
+        elif string_nuclear_state_class == 'CRIS':
+            try:
+                y,sys_err = NS(mass, float(I[:-1]))._Nuc_Prop_dict[param] 
+            except:
+                y,sys_err = NS(mass, int(I[:-1]))._Nuc_Prop_dict[param]
+            x = self.adapt_x_nproton(mass, n_proton)
+            # if scale_I:
+            #   y = self.scale_y_to_spin(y, I[:-1])
+        elif string_nuclear_state_class == 'Literature':
+            sys_err = 0
+            x = self.adapt_x_nproton(mass, n_proton)
+            y = self._lit_moment[str(mass) + '_' + str(I[:-1])][param]
+        else:
+            raise RuntimeError('give CRIS or IGISOL for string_nuclear_state_class')
+        if scale_I:
+            y = self.scale_y_to_spin(y, I[:-1])
+            sys_err = self.scale_y_to_spin(sys_err, I[:-1])
+        return x, factor*(y/denominator), factor*(sys_err/denominator)
 
-	def ax_parameters(self, ax: plt.Axes, x_value: Union[uf,unumpy.uarray], y_value: Union[uf,unumpy.uarray], I: float, label: str, **plot_kwargs) -> plt.Axes:
-		'''Plots the given x and y value with all miscellaneous plot features. Also svaes legend handles in a list
+	def ax_parameters(self, ax: plt.Axes, x_value: Union[uf,unumpy.uarray], y_value: Union[uf,unumpy.uarray], sys_err: Union[int,uf,unumpy.uarray], I: float, label: str, **plot_kwargs) -> plt.Axes:
+        '''Plots the given x and y value with all miscellaneous plot features. Also svaes legend handles in a list
 
         Parameters
         ----------
@@ -223,28 +229,32 @@ class Plotting:
         y_value: Unumpy.uarray or ufloat
             value of y
         I: float
-        	spin of the state
+            spin of the state
         label: str
-        	label indicating from which facility/literature
+            label indicating from which facility/literature
 
         Returns
         -------
         plt.Axes
         '''
-		if I + label not in self._legend_entries_done:
-			self._legend_handles.append(ax.errorbar(x = x_value, y = unumpy.nominal_values(y_value), yerr = unumpy.std_devs(y_value), 
-				markersize = self._markersize, fmt = plot_kwargs.get('fmt_func', self.get_shape_label)(label_I = [label,I[:-1]]), 
-				color = plot_kwargs.get('color_func', self.get_color_I)(label_I = [label,I[:-1]]), 
-				fillstyle = plot_kwargs.get('fillstyle_func', self.get_fillstyle_parity)(label_Ip = [label,I[:-1],I[-1]]),
-				label = plot_kwargs.get('label_addon', self.convert_decimalstring_fractionstring(float(I[:-1])) + r'$^{' + I[-1] + '}$ ') + label))
-		else:
-			ax.errorbar(x = x_value, y = unumpy.nominal_values(y_value), yerr = unumpy.std_devs(y_value), 
-				markersize = self._markersize, fmt = plot_kwargs.get('fmt_func', self.get_shape_label)(label_I = [label,I[:-1]]), 
-				color = plot_kwargs.get('color_func', self.get_color_I)(label_I = [label,I[:-1]]), 
-				fillstyle = plot_kwargs.get('fillstyle_func', self.get_fillstyle_parity)(label_Ip = [label,I[:-1],I[-1]]),
-				label = plot_kwargs.get('label_addon', self.convert_decimalstring_fractionstring(float(I[:-1])) + r'$^{' + I[-1] + '}$ ') + label)
-		self._legend_entries_done.append(I + label)
-		return ax
+        if I + label not in self._legend_entries_done:
+            self._legend_handles.append(ax.errorbar(x = x_value, y = unumpy.nominal_values(y_value), yerr = unumpy.std_devs(y_value), 
+                markersize = self._markersize, fmt = plot_kwargs.get('fmt_func', self.get_shape_label)(label_I = [label,I[:-1]]), 
+                color = plot_kwargs.get('color_func', self.get_color_I)(label_I = [label,I[:-1]]), 
+                fillstyle = plot_kwargs.get('fillstyle_func', self.get_fillstyle_parity)(label_Ip = [label,I[:-1],I[-1]]),
+                label = plot_kwargs.get('label_addon', self.convert_decimalstring_fractionstring(float(I[:-1])) + r'$^{' + I[-1] + '}$ ') + label)),
+        else:
+            ax.errorbar(x = x_value, y = unumpy.nominal_values(y_value), yerr = unumpy.std_devs(y_value), 
+                markersize = self._markersize, fmt = plot_kwargs.get('fmt_func', self.get_shape_label)(label_I = [label,I[:-1]]), 
+                color = plot_kwargs.get('color_func', self.get_color_I)(label_I = [label,I[:-1]]), 
+                fillstyle = plot_kwargs.get('fillstyle_func', self.get_fillstyle_parity)(label_Ip = [label,I[:-1],I[-1]]),
+                label = plot_kwargs.get('label_addon', self.convert_decimalstring_fractionstring(float(I[:-1])) + r'$^{' + I[-1] + '}$ ') + label)
+        self._legend_entries_done.append(I + label)
+        if sys_err != unumpy.std_devs(y_value):
+            ax.fill_between(x = [x_value-0.1,x_value+0.1], y1 = [unumpy.nominal_values(y_value)+sys_err,unumpy.nominal_values(y_value)+sys_err], 
+                y2 = [unumpy.nominal_values(y_value)-sys_err,unumpy.nominal_values(y_value)-sys_err], 
+                color = plot_kwargs.get('color_func', self.get_color_I)(label_I = [label,I[:-1]]), alpha = 0.3)
+        return ax
 
 	def get_fillstyle_parity(self, label_Ip: list) -> str:
 		'''return fillstyle depending on the parity

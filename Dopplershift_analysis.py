@@ -421,7 +421,6 @@ class Dopplershift_data:
         df = df.sort_values(by = ['x']) # put it in dataframe and sort by x for convenience but it is not needed at all
         yerr_h, yerr_l = (self.poisson_interval_high(df['y'])-df['y']),(df['y'] - self.poisson_interval_low(df['y']))
         df['yerr'] = yerr_h
-        # df.loc[df['yerr'] == 0, 'yerr'] = 1/np.sqrt(np.array(df['bunches'][df['yerr'] == 0])) # to calculate the errors at 0 events recorded
         return df
 
     def bin_wm_data(self, data: pd.DataFrame, freq_multiplier: int) -> pd.DataFrame:
@@ -461,7 +460,6 @@ class Dopplershift_data:
         df = df.sort_values(by = ['x']) # put it in dataframe and sort by x for convenience but it is not needed at all
         yerr_h, yerr_l = (self.poisson_interval_high(df['y'])-df['y']),(df['y'] - self.poisson_interval_low(df['y']))
         df['yerr'] = yerr_h
-        # df.loc[df['yerr'] == 0, 'yerr'] = 1/np.sqrt(np.array(df['bunches'][df['yerr'] == 0])) # to calculate the errors at 0 events recorded
         return df
 
     def bin_time_data(self, data: pd.DataFrame, binsize: Union[float,int]) -> pd.DataFrame:
@@ -499,7 +497,6 @@ class Dopplershift_data:
         df = df.sort_values(by = ['x']) # put it in dataframe and sort by x for convenience but it is not needed at all
         yerr_h, yerr_l = (self.poisson_interval_high(df['y'])-df['y']),(df['y'] - self.poisson_interval_low(df['y']))
         df['yerr'] = yerr_h
-        # df.loc[df['yerr'] == 0, 'yerr'] = 1/np.sqrt(np.array(df['bunches'][df['yerr'] == 0])) # to calculate the errors at 0 events recorded
         return df
 
     def cut_data(self, data: pd.DataFrame, borders: ArrayLike):
