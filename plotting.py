@@ -150,9 +150,9 @@ class Plotting:
             return x,y,0
         elif string_nuclear_state_class == 'CRIS':
             try:
-                y = NS(mass, float(I[:-1])).HFparam_dict[param] 
+                y = NS(mass, float(I[:-1]))._HFparam_dict[param] 
             except:
-                y = NS(mass, int(I[:-1])).HFparam_dict[param]
+                y = NS(mass, int(I[:-1]))._HFparam_dict[param]
             x = self.adapt_x_nproton(mass, n_proton)
             if scale_I:
                 y = self.scale_y_to_spin(y, I[:-1])
