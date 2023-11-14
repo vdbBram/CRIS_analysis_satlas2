@@ -219,6 +219,8 @@ class Dopplershift_data:
             plt.ylabel('Counts', fontsize = 25)
             plt.legend(fontsize = 20)
             plt.show()
+            data.loc[((data['delta_t'] < manual[0]) | (data['delta_t'] > manual[1])), 'delta_t'] = -0.005
+            data.loc[((data['delta_t'] < manual[0]) | (data['delta_t'] > manual[1])), 'channel'] = -1
             return data.loc[(data['delta_t'] < 0) | ( (data['delta_t'] > manual[0]) & (data['delta_t'] < manual[1]))]
         indexmax = int(np.where(TOF_spectrum[1] == max(tof))[0][0])
         indexleftbound = np.array(np.where(TOF_spectrum[1][0:indexmax] < (1-0.95) * max(tof)))[0][-1]
@@ -234,6 +236,8 @@ class Dopplershift_data:
         plt.ylabel('Counts', fontsize = 25)
         plt.legend(fontsize = 20)
         plt.show()
+        data.loc[((data['delta_t'] < TOF_spectrum[0][indexleftbound]) | (data['delta_t'] > TOF_spectrum[0][indexrightbound])), 'delta_t'] = -0.005
+        data.loc[((data['delta_t'] < TOF_spectrum[0][indexleftbound]) | (data['delta_t'] > TOF_spectrum[0][indexrightbound])), 'channel'] = -1
         return data.loc[(data['delta_t'] < 0) | ( (data['delta_t'] > TOF_spectrum[0][indexleftbound]) & (data['delta_t'] < TOF_spectrum[0][indexrightbound]))]
 
     def filter_scatter(self, data: pd.DataFrame, filename: str, method: str, ISCOOL_voltage_multiplier: float, **args) -> pd.DataFrame:
