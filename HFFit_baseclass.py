@@ -288,7 +288,7 @@ class HF_fitter:
         if input_param['set_priors'] != False:
             for key in input_param['set_priors'].keys():
                 value, sigma = input_param['set_priors'][key][0], input_param['set_priors'][key][1]
-                self.fitter.setParamPrior(self.fitter.sources[0].name, model.name, key, value, sigma) 
+                self.fitter.setParamPrior(self.fitter.sources[0][1].name, model.name, key, value, sigma) 
         if input_param['expressions'] != False: # sets contraints on the intensities if given
             for key in input_param['expressions'].keys():
                 parameter_name_to_fix = f'{self.fitter.sources[0][1].name}___{model.name}___{key}'
