@@ -115,8 +115,8 @@ class Dopplershift_data:
             for column in device_values:
                 if column not in ['bunch_no','events_per_bunch','delta_t']: # do not fill in these values since then you make up data
                     try:
-                        data[column] = data[column].fillna(method = 'ffill')
-                        data[column] = data[column].fillna(method = 'bfill')
+                        data[column] = data[column].ffill()
+                        data[column] = data[column].bfill()
                     except:
                         pass
         data = data.dropna()
@@ -344,7 +344,7 @@ class Dopplershift_data:
         if wavenumber.lower() == 'wavenumber_mixed':
             data[wavenumber] = data['wavenumber_4'] + data['wavenumber_3']
         try:
-            return data[(data[wavenumber] > self._wn_bounds[0]) * (data[wavenumber] < self._wn_bounds[1])]
+            return data[(data[wavenumber] > self._wn_bounds[0]) & (data[wavenumber] < self._wn_bounds[1])]
         except:
             raise print('No valid wavenumber channel was given')
 
@@ -415,7 +415,7 @@ class Dopplershift_data:
         data[self._wn_channel] = self.dopplershift_wn(data, freq_multiplier)
         groups = data.groupby('digit_index')
         df = pd.DataFrame()
-        df[['x','xerr']] = groups[self._wn_channel].agg([np.mean,np.std])
+        df[['x','xerr']] = groups[self._wn_channel].agg(['mean','std'])
         df['xerr'] = df['xerr'].fillna(0)
         df['x'] = (df['x'] - self._transition_wavenumber) * 29979.2458 
         df['xerr'] = df['xerr'] * 29979.2458
@@ -454,7 +454,7 @@ class Dopplershift_data:
         data['digit_index'] = np.digitize(data[self._wn_channel], spectrum_bins) 
         groups = data.groupby('digit_index')
         df = pd.DataFrame()
-        df[['x','xerr']] = groups[self._wn_channel].agg([np.mean,np.std])
+        df[['x','xerr']] = groups[self._wn_channel].agg(['mean','std'])
         df['xerr'] = df['xerr'].fillna(0)
         df['x'] = (df['x'] - self._transition_wavenumber) * 29979.2458
         df['xerr'] = df['xerr'] * 29979.2458
