@@ -6,7 +6,7 @@ mass_ref = -1
 DATA_FOLDER = 'C:\\Users\\u0148746\\OneDrive - KU Leuven\\Documents\\PhD\\CRIS\\'TODO'\\'
 SAVEPATH_PARAM = 'C:\\Users\\u0148746\\OneDrive - KU Leuven\\Documents\\PhD\\CRIS\\'TODO'\\Final_analysis_output\\Fitted_HFS_param\\'
 SAVEPATH_FIG = 'C:\\Users\\u0148746\\OneDrive - KU Leuven\\Documents\\PhD\\CRIS\\'TODO'\\Final_analysis_output\\Fitted_HFS_fig\\'
-data_columns = ['x','xerr','y','yerr','bunches']
+data_columns = ['x','xerr','y','yerr','bunches', 'median_time_scan']
 #####################################
 
 spins_gs = {
