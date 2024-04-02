@@ -264,11 +264,13 @@ def reference_scan_correction(interp_method: str, data: ArrayLike, MASS: int, ma
     nb_datasets = len(data)
     if interp_method.lower() in ['gp', 'gaussian process', 'gaussian_process', 'gaussian-process', 'gaussianprocess']:
         for nb in range(nb_datasets):
-            median_time_dataset = np.median(pd.read_csv(DATA_FOLDER + 'Data\\' + str(MASS) + '\\scan_' + str(SCANS[nb]) + '\\tagger_ds.csv' , sep = ';', header = None, names = ['timestamp', 'offset', 'bunch_no', 'events_per_bunch', 'channel', 'delta_t'])['timestamp'])
+            # median_time_dataset = np.median(pd.read_csv(DATA_FOLDER + 'Data\\' + str(MASS) + '\\scan_' + str(SCANS[nb]) + '\\tagger_ds.csv' , sep = ';', header = None, names = ['timestamp', 'offset', 'bunch_no', 'events_per_bunch', 'channel', 'delta_t'])['timestamp'])
+            median_time_dataset = data[nb][:,5][0]
             data[nb][:,0] = data[nb][:,0] - np.median(GP_refscans_centroid(os.getcwd()+'\\', name)['MAPcentroid'].loc[np.isclose(GP_refscans_centroid(os.getcwd()+'\\', name)['median_timestamp_copy'], median_time_dataset)])
     elif interp_method.lower() in ['spline', 'interpolation', 'interpolate', 'linear spline', 'linearspline', 'linear_spline', 'linear-spline']:
         for nb in range(nb_datasets):
-            median_time_dataset = np.median(pd.read_csv(DATA_FOLDER + 'Data\\' + str(MASS) + '\\scan_' + str(SCANS[nb]) + '\\tagger_ds.csv' , sep = ';', header = None, names = ['timestamp', 'offset', 'bunch_no', 'events_per_bunch', 'channel', 'delta_t'])['timestamp'])
+            # median_time_dataset = np.median(pd.read_csv(DATA_FOLDER + 'Data\\' + str(MASS) + '\\scan_' + str(SCANS[nb]) + '\\tagger_ds.csv' , sep = ';', header = None, names = ['timestamp', 'offset', 'bunch_no', 'events_per_bunch', 'channel', 'delta_t'])['timestamp'])
+            median_time_dataset = data[nb][:,5][0]
             data[nb][:,0] = data[nb][:,0] - spline_refscans_centroid(DATA_FOLDER, mass_ref, I_ref, plot)(median_time_dataset) # make it in median time scan and change the append
     elif interp_method.lower() in ['none', 'no']:
         return data
