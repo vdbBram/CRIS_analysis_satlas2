@@ -425,6 +425,7 @@ class Dopplershift_data:
         df = df.sort_values(by = ['x']) # put it in dataframe and sort by x for convenience but it is not needed at all
         yerr_h, yerr_l = (self.poisson_interval_high(df['y'])-df['y']),(df['y'] - self.poisson_interval_low(df['y']))
         df['yerr'] = yerr_h
+        df['median_scan_time'] = np.median(data['timestamp_copy'])
         return df
 
     def bin_wm_data(self, data: pd.DataFrame, freq_multiplier: int) -> pd.DataFrame:
@@ -464,6 +465,7 @@ class Dopplershift_data:
         df = df.sort_values(by = ['x']) # put it in dataframe and sort by x for convenience but it is not needed at all
         yerr_h, yerr_l = (self.poisson_interval_high(df['y'])-df['y']),(df['y'] - self.poisson_interval_low(df['y']))
         df['yerr'] = yerr_h
+        df['median_scan_time'] = np.median(data['timestamp_copy'])
         return df
 
     def bin_time_data(self, data: pd.DataFrame, binsize: Union[float,int]) -> pd.DataFrame:
@@ -492,7 +494,7 @@ class Dopplershift_data:
         data['digit_index'] = np.digitize(data['timestamp_copy'], time_bins) 
         groups = data.groupby('digit_index')
         df = pd.DataFrame()
-        df[['x', 'xerr']] = groups['timestamp_copy'].agg([np.mean,np.std])
+        df[['x', 'xerr']] = groups['timestamp_copy'].agg(['mean','std'])
         df['xerr'] = df['xerr'].fillna(0)
         df['x'] = df['x'] - np.min(df['x'])
         df['y'] = (groups.count()['timestamp_copy'] - groups['delta_t'].agg(lambda x: x.le(0).sum())) 
@@ -501,6 +503,7 @@ class Dopplershift_data:
         df = df.sort_values(by = ['x']) # put it in dataframe and sort by x for convenience but it is not needed at all
         yerr_h, yerr_l = (self.poisson_interval_high(df['y'])-df['y']),(df['y'] - self.poisson_interval_low(df['y']))
         df['yerr'] = yerr_h
+        df['median_scan_time'] = np.median(data['timestamp_copy'])
         return df
 
     def cut_data(self, data: pd.DataFrame, borders: ArrayLike):
@@ -550,6 +553,7 @@ class Dopplershift_data:
         df = df.sort_values(by = ['x']) # put it in dataframe and sort by x for convenience but it is not needed at all
         yerr_h, yerr_l = (self.poisson_interval_high(df['y'])-df['y']),(df['y'] - self.poisson_interval_low(df['y']))
         df['yerr'] = yerr_h
+        df['median_scan_time'] = np.median(data['timestamp_copy'])
         return df
 
     def plot_time(self, data: pd.DataFrame, fig: plt.figure, ax: Union[plt.Axes, ArrayLike], save: bool = False, save_format: str = 'png', **kwargs) -> plt.figure:
