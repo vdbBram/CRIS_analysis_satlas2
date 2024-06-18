@@ -103,6 +103,7 @@ class Dopplershift_data:
             data = pd.concat(devices_to_concat)
         except:
             raise print('Either the mass/scan combination is wrong or the path is wrong')
+        data['voltage'] = np.zeros(len(data['timestamp']))
         data['timestamp_copy'] = data['timestamp']
         data = data.set_index(['timestamp'])
         data = data.sort_index()
