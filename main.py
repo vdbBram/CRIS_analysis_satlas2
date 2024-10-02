@@ -23,8 +23,8 @@ from HFFit_constants import *
 # binned_data = D.bin_data(data = data, freq_multiplier = 2) # this is for voltage scans, use bin_wm_data() with same arguments for laser scanning
 # fig,ax = plt.subplots(figsize = (14,9))
 # fig = D.plot(data = binned_data, fig = fig, ax = ax, save = True, save_format = 'png', fmt = 'r-', label = 'Dopplershifted data') # add save = True if you want to save
-# plt.show()
 # D.save_data(binned_data) # saves in D._SAVEPATH, change it with D._SAVEPATH = new_save_path if you want, or change it in the class variables, defaults to the one in the class
+# plt.show()
 
 '''To do 1 state in 1 figure fitting'''
 # ##################################################
