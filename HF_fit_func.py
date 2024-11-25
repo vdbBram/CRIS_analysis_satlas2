@@ -168,7 +168,7 @@ def param_plot(nb_datasets: int, fig: plt.figure, ax: Union[plt.Axes,ArrayLike],
         else:
             denom_res.iloc[i, denom_res.columns.get_loc('res')] = yerr_l[i]
     # res = (HF_fitter._y - HF_fitter.datasource.evaluate(HF_fitter._x)) / HF_fitter.get_yerr() # residuals
-    res = (HF_fitter._y - HF_fitter.datasource.evaluate(HF_fitter._x)) / denom_res['res']    
+    res = (HF_fitter._y - HF_fitter.datasource.evaluate(HF_fitter._x)) / 2*denom_res['res']    
     if nb_datasets == 1:
         ax[0].errorbar(x = data[0], y = data[2]/bunches, xerr = data[1], yerr = data[3]/bunches, fmt = HF_fitter._plot_args['data_fmt'], fillstyle = HF_fitter._plot_args['data_fillstyle'], 
             markersize = HF_fitter._plot_args['data_markersize'], ecolor = HF_fitter._plot_args['data_ecolor'])
